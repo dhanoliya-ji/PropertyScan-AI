@@ -28,7 +28,12 @@ def gravity_from_normals(N):
             best, best_score = a, score
     sel = np.abs(N @ best) > np.cos(np.radians(15))
     up = np.linalg.svd(N[sel] * np.sign(N[sel] @ best)[:, None], full_matrices=False)[2][0]
-    return up / np.linalg.norm(up)
+    up /= np.linalg.norm(up)
+    # normals face the camera, so floor and ceiling are sign-symmetric; break the tie with the
+    # fact that up-facing surfaces (floor, tables, beds, counters) outnumber down-facing ones
+    if (N @ up > 0.9).sum() < (N @ up < -0.9).sum():
+        up = -up
+    return up
 
 
 def manhattan_yaw(N, horizontal_tol=0.25):
