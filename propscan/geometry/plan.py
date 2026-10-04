@@ -227,7 +227,7 @@ def _poly_from_edges(E):
 # --------------------------------------------------------------------------- main
 
 def build_plan(P, N, cams_xz, cam_y, fs=None, wall_band=None, min_room_area=1.2,
-               open_plan_merge=1.6):
+               open_plan_merge=1.6, single_room=False):
     warnings = []
     floor, ceil = levels(P, N, cam_y)
     top = (ceil - 0.12) if ceil else floor + 2.1
@@ -263,6 +263,12 @@ def build_plan(P, N, cams_xz, cam_y, fs=None, wall_band=None, min_room_area=1.2,
     seeds, ns = ndi.label(dt > 0.42)
     labels = watershed(-dt, seeds, mask=interior)
     labels = _merge_regions(labels, min_room_area, open_plan_merge)
+    if single_room:
+        # photo tier: one folder = one room by construction; keep the largest connected piece
+        lab, nl = ndi.label(labels > 0)
+        if nl:
+            big = 1 + int(np.argmax(ndi.sum(labels > 0, lab, range(1, nl + 1))))
+            labels = (lab == big).astype(labels.dtype)
 
     rooms = []
     for lbl in [l for l in np.unique(labels) if l > 0]:
@@ -271,7 +277,7 @@ def build_plan(P, N, cams_xz, cam_y, fs=None, wall_band=None, min_room_area=1.2,
         if r is not None:
             rooms.append(r)
 
-    openings = _crossing_doors(labels, rooms, lo, shape, P, N, floor, cams_xz)
+    openings = [] if single_room else _crossing_doors(labels, rooms, lo, shape, P, N, floor, cams_xz)
     for o in _room_openings(labels, rooms, lo, P, N, is_wall, floor):
         if not any(set(o.rooms) == set(q.rooms) and np.hypot(o.center[0] - q.center[0], o.center[1] - q.center[1]) < 0.8
                    for q in openings):

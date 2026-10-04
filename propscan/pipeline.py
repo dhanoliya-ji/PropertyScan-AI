@@ -27,7 +27,7 @@ def detect_tier(path: Path) -> str:
     raise ValueError(f"cannot infer tier for {path}")
 
 
-def geometry_from_frameset(fs, tier, drift=True, timings=None, gravity_aligned=True):
+def geometry_from_frameset(fs, tier, drift=True, timings=None, gravity_aligned=True, single_room=False):
     """FrameSet -> (PlanGeom, aligned points, drift report). Shared engine for lidar and video."""
     timings = timings if timings is not None else {}
     t = time.time()
@@ -51,7 +51,7 @@ def geometry_from_frameset(fs, tier, drift=True, timings=None, gravity_aligned=T
     timings["fuse"] = time.time() - t
     t = time.time()
     cams = fs.poses[:, :3, 3]
-    pg = build_plan(P, N, cams[:, [0, 2]], cams[:, 1], fs)
+    pg = build_plan(P, N, cams[:, [0, 2]], cams[:, 1], fs, single_room=single_room)
     timings["plan"] = time.time() - t
     return pg, P, N, drep
 
