@@ -44,7 +44,7 @@ def _yaw_only(T):
     return out
 
 
-def correct_drift(fs: FrameSet, enabled=True, frag_len=None, voxel=0.03, max_pair_dist=3.0, max_loop_per_frag=8):
+def correct_drift(fs: FrameSet, enabled=True, frag_len=None, voxel=0.03, max_pair_dist=3.0, max_loop_per_frag=4):
     report = dict(method="fragment pose graph + ICP loop closures, yaw/translation only",
                   enabled=enabled, loop_closures=0, fragments=0, mean_correction_m=0.0, max_correction_m=0.0)
     if not enabled or fs.n < 40:
