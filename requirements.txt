@@ -1,0 +1,11 @@
+numpy>=1.26
+scipy>=1.11
+opencv-python-headless>=4.9
+open3d>=0.18
+shapely>=2.0
+scikit-image>=0.22
+matplotlib>=3.8
+pillow>=10
+pydantic>=2.5
+torch>=2.2
+transformers>=4.45

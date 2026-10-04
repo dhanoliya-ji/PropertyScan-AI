@@ -1,0 +1,14 @@
+# raw captures are large; fetched/placed locally (see README)
+sample data/
+data/
+*.zip
+# generated outputs (regenerable via scripts/)
+out/
+runs/*/cache/
+# model weights cache
+.cache/
+weights/
+__pycache__/
+*.pyc
+.vscode/
+.venv/
