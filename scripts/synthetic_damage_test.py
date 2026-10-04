@@ -3,7 +3,7 @@
 Two damage regions of known metric size are defined *in 3D on a measured wall plane* and
 painted into every analysed RGB frame by projecting them with that frame's pose, so they
 are multi-view consistent like real damage (occlusion-tested against the frame's depth):
-  - water_stain: brownish diffuse ellipse 0.40 m x 0.25 m
+  - water_stain: brownish diffuse ellipse 0.40 m x 0.25 m, ~25% darker at the centre
   - crack: dark 4 mm line, 0.50 m long, at 35 deg
 The detector then runs unchanged. We report detected class, surface and metric extent vs truth.
 This validates localisation/extent/rule logic only; it is NOT evidence on real damage.
@@ -85,9 +85,10 @@ def main(src):
             m = np.zeros((H, W), np.uint8)
             cv2.fillPoly(m, [uv.astype(np.int32)], 255)
             if m.any():
+                # brown water stain, ~25% darker at the centre, feathered edge
                 dist = cv2.distanceTransform(m, cv2.DIST_L2, 5)
-                a = np.clip(dist / max(dist.max() * 0.5, 1), 0, 1)[..., None] * 0.28
-                img = img * (1 - a) + img * np.array([0.55, 0.62, 0.70]) * a / 0.28 * 0.28 + img * 0                     if False else img * (1 - a) + (img * np.array([0.62, 0.70, 0.78])) * a
+                a = np.clip(dist / max(dist.max() * 0.5, 1), 0, 1)[..., None] * 0.55
+                img = img * (1 - a) + (img * np.array([0.45, 0.60, 0.72])) * a
         # crack: thin dark polyline
         t = np.linspace(-0.25, 0.25, 200)
         dirc = np.cos(np.radians(35)) * along + np.sin(np.radians(35)) * up

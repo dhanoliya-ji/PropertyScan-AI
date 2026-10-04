@@ -1,6 +1,6 @@
 {
  "note": "SYNTHETIC injection on a real wall of the sample capture; not real damage",
- "wall": "R1-W1-S",
+ "wall": "R2-W11-S",
  "truth": [
   {
    "cls": "water_stain",
@@ -13,7 +13,48 @@
    "h": 0.286788218175523
   }
  ],
- "detected": [],
- "concealed": [],
- "scope": []
+ "detected": [
+  {
+   "id": "D1",
+   "cls": "crack",
+   "surface": "R2-W11-S",
+   "w": 0.391,
+   "h": 0.267,
+   "w_ci": [
+    0.3653,
+    0.4169
+   ],
+   "h_ci": [
+    0.2416,
+    0.2931
+   ],
+   "frames": 7
+  }
+ ],
+ "concealed": [
+  {
+   "rule": "R4",
+   "surface": "R2-W11-S"
+  }
+ ],
+ "scope": [
+  {
+   "code": "DRY-CRK",
+   "surface": "R2-W11-S",
+   "qty": 0.4302,
+   "unit": "m"
+  },
+  {
+   "code": "PNT-FULL",
+   "surface": "R2-W11-S",
+   "qty": 5.9107,
+   "unit": "m2"
+  },
+  {
+   "code": "INSP-MOIST",
+   "surface": "R2-W11-S",
+   "qty": 1.0,
+   "unit": "ea"
+  }
+ ]
 }

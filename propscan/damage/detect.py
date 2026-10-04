@@ -74,7 +74,10 @@ def _detect_2d(bgr, valid):
     """Return list of (class, mask) candidates inside `valid` (surface pixels, image res)."""
     g = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY).astype(np.float32)
     sat = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)[..., 1].astype(np.float32)
-    bg = cv2.medianBlur(g.astype(np.uint8), 31).astype(np.float32)
+    # shading-free background at a scale larger than a stain (a 0.4 m stain at 2 m is ~100 px):
+    # median on a 4x-downsampled image (~124 px effective kernel), upsampled back
+    small = cv2.resize(g.astype(np.uint8), (g.shape[1] // 4, g.shape[0] // 4), interpolation=cv2.INTER_AREA)
+    bg = cv2.resize(cv2.medianBlur(small, 31), (g.shape[1], g.shape[0]), interpolation=cv2.INTER_LINEAR).astype(np.float32)
     rel = (bg - g) / np.maximum(bg, 20)              # darker than surroundings, shading-free
     out = []
     v8 = valid.astype(np.uint8)
@@ -93,7 +96,12 @@ def _detect_2d(bgr, valid):
             # (pictures, outlets, door hardware) by edge sharpness along its boundary
             edge = cv2.morphologyEx(m.astype(np.uint8), cv2.MORPH_GRADIENT, np.ones((3, 3), np.uint8)) > 0
             grad = cv2.Laplacian(g, cv2.CV_32F)[edge]
-            if np.mean(np.abs(grad)) < 12:
+            # water stains are yellow-brown (tannins): red rises relative to blue against the surround;
+            # shadows and grime are neutral
+            ring = (cv2.dilate(m.astype(np.uint8), np.ones((15, 15), np.uint8)) > 0) & ~m & inner
+            rb = bgr[..., 2].astype(np.float32) - bgr[..., 0].astype(np.float32)
+            warm = ring.sum() > 50 and (np.median(rb[m]) - np.median(rb[ring])) > 5
+            if np.mean(np.abs(grad)) < 12 and warm:
                 out.append(("water_stain", m))
         elif 4 <= a < 60 and np.median(sat[m]) < 70:
             # mould spots are grey/black/dark green; magnets, labels and prints are saturated
@@ -112,7 +120,7 @@ def _detect_2d(bgr, valid):
     for k in range(1, n):
         w, h, a = st[k, cv2.CC_STAT_WIDTH], st[k, cv2.CC_STAT_HEIGHT], st[k, cv2.CC_STAT_AREA]
         L = max(w, h)
-        if L >= 40 and a / max(L, 1) < 3.0 and min(w, h) > 3:   # long, thin, and not an axis-aligned edge
+        if L >= 40 and a / max(L, 1) < 5.0 and min(w, h) > 3:   # long, thin, and not an axis-aligned edge
             out.append(("crack", lab == k))
     return out
 

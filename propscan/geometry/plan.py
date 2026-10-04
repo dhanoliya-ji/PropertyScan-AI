@@ -516,11 +516,24 @@ def _fit_edge_planes(e, Wp, Wn, out_max=1.0, in_max=0.25, bin_w=0.02, cell=0.05)
     if a1 - a0 < 0.1:
         return False
     off = (Wp[:, ax] - e.c) * e.outward
-    sel = (off > -in_max) & (off < out_max) & (Wp[:, al] > a0) & (Wp[:, al] < a1) & (Wn[:, ax] * e.outward < -0.8)
+    inspan = (Wp[:, al] > a0) & (Wp[:, al] < a1)
+    # barrier: the back face of our own wall (a surface facing *away* from the room, seen from the
+    # neighbouring room) caps the outward search, so we never snap through a wall onto the far
+    # wall of a narrow neighbour (corridor, cupboard) whose face also points back at us
+    back = inspan & (Wn[:, ax] * e.outward > 0.8) & (off > 0.03) & (off < out_max)
+    if back.sum() >= 15:
+        ob = off[back]
+        nc_b = max(1, int(np.ceil((a1 - a0) / cell)))
+        for lim in np.arange(0.05, out_max, bin_w):
+            cells = np.unique(((Wp[back][(ob > lim - 0.03) & (ob < lim + 0.03), al] - a0) / cell).astype(int))
+            if len(cells) >= 0.3 * nc_b:
+                out_max = float(lim)
+                break
+    sel = (off > -in_max) & (off < out_max) & inspan & (Wn[:, ax] * e.outward < -0.8)
     o, along = off[sel], Wp[sel, al]
     if len(o) < 25:
         return False
-    nb = int(np.ceil((out_max + in_max) / bin_w))
+    nb = max(1, int(np.ceil((out_max + in_max) / bin_w)))
     nc = max(1, int(np.ceil((a1 - a0) / cell)))
     ib = np.clip(((o + in_max) / bin_w).astype(int), 0, nb - 1)
     ic = np.clip(((along - a0) / cell).astype(int), 0, nc - 1)
