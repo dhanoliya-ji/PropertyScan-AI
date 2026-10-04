@@ -55,7 +55,7 @@ def main(evidence=False):
     sys.path.insert(0, str(ROOT / "scripts"))
     from benchmark import repeatability
     out = {}
-    for mode in ("legacy", "high", "planes"):
+    for mode in ("legacy", "high", "planes"):  # planes = shipped fix (rectangle snap on)
         A, pgA, PA, NA = plan("L_ceil", mode)
         B, pgB, PB, NB = plan("L_floor", mode)
         rep = repeatability(A, B)

@@ -31,6 +31,11 @@ RES = 0.025  # plan grid, metres
 #   "planes": snap each edge to the room-facing wall plane with the best *coverage along the
 #             edge*, searching up to 1.0 m outwards from the occupancy boundary (fix attempt 2)
 WALL_FIT = os.environ.get("PROPSCAN_WALL_FIT", "planes")
+# Rooms whose outline fills >= RECT_FILL of their wall-snapped bounding rectangle are rectangles;
+# the notches are furniture / segmentation noise and are what made corners unrepeatable.
+RECT_SNAP = os.environ.get("PROPSCAN_RECT_SNAP", "1") == "1"
+RECT_FILL = 0.85
+MIN_COVER = float(os.environ.get("PROPSCAN_MIN_COVER", "0.5"))
 
 
 @dataclass
@@ -423,6 +428,8 @@ def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings, is_hi=None)
             e.n_pts = int(len(v))
     if WALL_FIT in ("high", "planes"):
         E = _merge_jogs(E)
+    if WALL_FIT == "planes" and RECT_SNAP:
+        E = _rectangle_snap(E, Wp, Wn)
     poly = _poly_from_edges(E)
     V = np.array(poly)
     # update spans from refined vertices
@@ -524,7 +531,7 @@ def _fit_edge_planes(e, Wp, Wn, out_max=1.0, in_max=0.25, bin_w=0.02, cell=0.05)
     for k in range(nb):
         cov[k] = occ[max(0, k - 1):k + 2].any(0).mean()
     best = cov.max()
-    if best < 0.3:
+    if best < MIN_COVER:
         return False
     # outermost plane whose coverage is close to the best (walls are behind furniture faces)
     k = int(np.flatnonzero(cov >= 0.8 * best).max())
@@ -539,6 +546,27 @@ def _fit_edge_planes(e, Wp, Wn, out_max=1.0, in_max=0.25, bin_w=0.02, cell=0.05)
     e.n_pts = int(len(core))
     e.observed = True
     return True
+
+
+def _rectangle_snap(E, Wp, Wn):
+    V = np.array(_poly_from_edges(E))
+    area = abs(_shoelace(V))
+    x0, z0 = V.min(0)
+    x1, z1 = V.max(0)
+    # CCW rectangle (in x,z): bottom (z=z0) runs +x, right (x=x1) runs +z, ...
+    rect = [Edge('H', z0, x0, x1, 0), Edge('V', x1, z0, z1, 0), Edge('H', z1, x1, x0, 0), Edge('V', x0, z1, z0, 0)]
+    raw = [[e.axis, e.c, 1.0] for e in rect]
+    rect = _edges_to_geom(raw)
+    for e, (a, b) in zip(rect, [(x0, x1), (z0, z1), (x1, x0), (z1, z0)]):
+        e.a, e.b = a, b
+    ok = all(_fit_edge_planes(e, Wp, Wn) for e in rect)
+    if not ok:
+        return E
+    R = np.array(_poly_from_edges(rect))
+    ra = abs(_shoelace(R))
+    if ra <= 0 or area / ra < RECT_FILL or area / ra > 1.15:
+        return E
+    return rect
 
 
 def _merge_jogs(E, max_jog=0.5, max_step=0.06, weak_jog=0.6, weak_step=0.15, weak_pts=40):
