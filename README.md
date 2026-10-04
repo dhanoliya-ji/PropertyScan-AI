@@ -1,5 +1,7 @@
 # PropertyScan: phone capture to a dimensioned whole-property floor plan
 
+> **Reviewers: start with [PROJECT_REPORT.ipynb](PROJECT_REPORT.ipynb).** It's a full walkthrough of what was built, the measured results with plans, the fix loop, what isn't done and why (including the no-iPhone hardware constraint), and defence notes. No code reading needed.
+
 One command per capture, three input tiers, one output contract:
 
 ```
