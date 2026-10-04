@@ -143,7 +143,13 @@ def estimate_poses(frames, depths, K, Kd, tracks=None):
             r = r[(raw > 0.2) & (Xj[:, 2] > 0.2)]
             if len(r) < 10:
                 continue
-            cand = (len(inl), i, R, tvec.ravel(), float(np.median(r)))
+            s_new = float(np.median(r))
+            # the model's own scale can jump ~1.7x between keyframes in a fast pan (measured on
+            # single_room); beyond 2.5x the PnP is wrong, not the model
+            jump = s_new / max(scale[i], 1e-6)
+            if not (1 / 2.5 < jump < 2.5):
+                continue
+            cand = (len(inl), i, R, tvec.ravel(), s_new)
             if best is None or cand[0] > best[0]:
                 best = cand
         if best is None and tracks is not None and tracks[j] is not None and len(tracks[j][0]) >= 8:
@@ -163,7 +169,7 @@ def estimate_poses(frames, depths, K, Kd, tracks=None):
         T_j_i[:3, 3] = t
         poses[j] = poses[i] @ np.linalg.inv(T_j_i)   # camera j -> world
         # damp scale chaining towards the model's own scale to stop a random walk
-        scale[j] = np.exp(0.85 * np.log(s) + 0.15 * np.log(scale[i]))
+        scale[j] = np.clip(np.exp(0.85 * np.log(s) + 0.15 * np.log(scale[i])), 0.2, 5.0)
     return poses, scale, ok_flags
 
 

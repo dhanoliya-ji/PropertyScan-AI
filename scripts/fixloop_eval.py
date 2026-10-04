@@ -55,7 +55,7 @@ def main(evidence=False):
     sys.path.insert(0, str(ROOT / "scripts"))
     from benchmark import repeatability
     out = {}
-    for mode in ("legacy", "high"):
+    for mode in ("legacy", "high", "planes"):
         A, pgA, PA, NA = plan("L_ceil", mode)
         B, pgB, PB, NB = plan("L_floor", mode)
         rep = repeatability(A, B)
@@ -69,7 +69,7 @@ def main(evidence=False):
         offs = []
         for rid in ("L_ceil", "L_floor"):
             _, pg_l, _, _ = plan(rid, "legacy")
-            _, pg_h, _, _ = plan(rid, "high")
+            _, pg_h, _, _ = plan(rid, "planes")
             for rl in pg_l.rooms:
                 rh = min(pg_h.rooms, key=lambda r: np.linalg.norm(np.mean(r.polygon, 0) - np.mean(rl.polygon, 0)))
                 for e in rl.edges:

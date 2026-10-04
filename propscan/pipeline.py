@@ -36,6 +36,8 @@ def geometry_from_frameset(fs, tier, drift=True, timings=None, gravity_aligned=T
     timings["drift"] = time.time() - t
     t = time.time()
     P, N, _ = fuse(fs, step=1 if fs.n < 1200 else 2)
+    if len(P) < 1000:
+        raise RuntimeError(f"only {len(P)} fused points: depth/tracking failed for this capture")
     if not gravity_aligned:
         from .geometry.align import gravity_from_normals
         up = gravity_from_normals(N)

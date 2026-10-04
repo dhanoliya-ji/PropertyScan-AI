@@ -1,0 +1,163 @@
+{
+ "legacy": {
+  "plan_iou": 0.705,
+  "matched_rooms": 8,
+  "walls_compared": 25,
+  "walls_within_1cm_or_0p5pct": 0.0,
+  "wall_abs_diff_median_cm": 24.13,
+  "wall_abs_diff_p90_cm": 66.16,
+  "ceiling_pairs": [],
+  "area_pairs": [
+   [
+    "R1",
+    22.07,
+    20.01
+   ],
+   [
+    "R2",
+    8.89,
+    5.73
+   ],
+   [
+    "R3",
+    6.39,
+    6.54
+   ],
+   [
+    "R4",
+    4.59,
+    1.54
+   ],
+   [
+    "R5",
+    4.89,
+    4.18
+   ],
+   [
+    "R6",
+    4.82,
+    2.73
+   ],
+   [
+    "R7",
+    2.21,
+    1.94
+   ],
+   [
+    "R8",
+    1.64,
+    1.98
+   ]
+  ],
+  "openings_a": 5,
+  "openings_b": 2,
+  "openings_matched": 1,
+  "opening_width_diff_le_2cm": 0.0
+ },
+ "high": {
+  "plan_iou": 0.707,
+  "matched_rooms": 7,
+  "walls_compared": 21,
+  "walls_within_1cm_or_0p5pct": 0.048,
+  "wall_abs_diff_median_cm": 41.18,
+  "wall_abs_diff_p90_cm": 81.05,
+  "ceiling_pairs": [],
+  "area_pairs": [
+   [
+    "R1",
+    24.56,
+    21.53
+   ],
+   [
+    "R2",
+    10.47,
+    6.97
+   ],
+   [
+    "R3",
+    6.73,
+    6.55
+   ],
+   [
+    "R5",
+    5.95,
+    4.29
+   ],
+   [
+    "R6",
+    4.9,
+    3.06
+   ],
+   [
+    "R7",
+    2.24,
+    1.94
+   ],
+   [
+    "R8",
+    1.6,
+    2.61
+   ]
+  ],
+  "openings_a": 5,
+  "openings_b": 2,
+  "openings_matched": 1,
+  "opening_width_diff_le_2cm": 0.0
+ },
+ "planes": {
+  "plan_iou": 0.756,
+  "matched_rooms": 7,
+  "walls_compared": 26,
+  "walls_within_1cm_or_0p5pct": 0.038,
+  "wall_abs_diff_median_cm": 33.32,
+  "wall_abs_diff_p90_cm": 58.8,
+  "ceiling_pairs": [],
+  "area_pairs": [
+   [
+    "R1",
+    27.06,
+    22.49
+   ],
+   [
+    "R2",
+    10.68,
+    7.93
+   ],
+   [
+    "R3",
+    7.04,
+    7.49
+   ],
+   [
+    "R5",
+    6.04,
+    6.05
+   ],
+   [
+    "R6",
+    5.03,
+    3.52
+   ],
+   [
+    "R7",
+    2.56,
+    1.99
+   ],
+   [
+    "R8",
+    2.24,
+    2.65
+   ]
+  ],
+  "openings_a": 5,
+  "openings_b": 3,
+  "openings_matched": 1,
+  "opening_width_diff_le_2cm": 0.0
+ },
+ "evidence": {
+  "edges": 113,
+  "moved_outward_gt_5cm": 0.46017699115044247,
+  "moved_outward_gt_15cm": 0.2920353982300885,
+  "median_abs_move_cm": 4.988597381557469
+ }
+}

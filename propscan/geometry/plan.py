@@ -27,7 +27,10 @@ RES = 0.025  # plan grid, metres
 #   "legacy": fit each room edge to the first room-facing vertical surface 0.12-2.2 m high
 #   "high":   fit to the outermost well-supported room-facing plane *above furniture height*
 #             (1.5 m .. ceiling), searching up to 0.8 m outwards; merge furniture jogs
-WALL_FIT = os.environ.get("PROPSCAN_WALL_FIT", "high")
+#             (fix attempt 1: rejected, see docs/FIX_LOOP.md)
+#   "planes": snap each edge to the room-facing wall plane with the best *coverage along the
+#             edge*, searching up to 1.0 m outwards from the occupancy boundary (fix attempt 2)
+WALL_FIT = os.environ.get("PROPSCAN_WALL_FIT", "planes")
 
 
 @dataclass
@@ -390,6 +393,13 @@ def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings, is_hi=None)
     for e in E:
         if WALL_FIT == "high" and is_hi is not None and _fit_edge_high(e, Hp, Hn):
             continue
+        if WALL_FIT == "planes":
+            if not _fit_edge_planes(e, Wp, Wn):
+                # no plane covers this edge: the wall was not seen. Do not fall back to whatever
+                # room-facing surface is nearest (that is how furniture became "walls")
+                e.observed = False
+                e.sigma_fit = 0.05
+            continue
         ax = 0 if e.axis == 'V' else 2       # constant coordinate axis
         al = 2 if e.axis == 'V' else 0       # along axis
         lo_s, hi_s = sorted((e.a, e.b))
@@ -411,7 +421,7 @@ def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings, is_hi=None)
             e.observed = False
             e.sigma_fit = 0.03
             e.n_pts = int(len(v))
-    if WALL_FIT == "high":
+    if WALL_FIT in ("high", "planes"):
         E = _merge_jogs(E)
     poly = _poly_from_edges(E)
     V = np.array(poly)
@@ -484,9 +494,58 @@ def _fit_edge_high(e, Hp, Hn, out_max=0.8, in_max=0.25, bin_w=0.02):
     return True
 
 
-def _merge_jogs(E, max_jog=0.5, max_step=0.06):
+def _fit_edge_planes(e, Wp, Wn, out_max=1.0, in_max=0.25, bin_w=0.02, cell=0.05):
+    """Snap edge `e` to the room-facing plane that covers the largest fraction of the edge's span.
+
+    The occupancy mask stops wherever the floor next to a wall was not seen (furniture, camera
+    never looked down there), so the wall can be up to ~1 m outside the mask. Coverage (fraction
+    of 5 cm cells along the span that hold wall points within +-2 cm of the plane) is what
+    separates a wall from furniture faces and clutter: a wall runs the full span."""
+    ax = 0 if e.axis == 'V' else 2
+    al = 2 if e.axis == 'V' else 0
+    lo_s, hi_s = sorted((e.a, e.b))
+    trim = min(0.15, 0.2 * (hi_s - lo_s))
+    a0, a1 = lo_s + trim, hi_s - trim
+    if a1 - a0 < 0.1:
+        return False
+    off = (Wp[:, ax] - e.c) * e.outward
+    sel = (off > -in_max) & (off < out_max) & (Wp[:, al] > a0) & (Wp[:, al] < a1) & (Wn[:, ax] * e.outward < -0.8)
+    o, along = off[sel], Wp[sel, al]
+    if len(o) < 25:
+        return False
+    nb = int(np.ceil((out_max + in_max) / bin_w))
+    nc = max(1, int(np.ceil((a1 - a0) / cell)))
+    ib = np.clip(((o + in_max) / bin_w).astype(int), 0, nb - 1)
+    ic = np.clip(((along - a0) / cell).astype(int), 0, nc - 1)
+    occ = np.zeros((nb, nc), bool)
+    occ[ib, ic] = True
+    # a plane at bin k covers cell c if any point lies within +-1 bin (+-2 cm)
+    cov = np.zeros(nb)
+    for k in range(nb):
+        cov[k] = occ[max(0, k - 1):k + 2].any(0).mean()
+    best = cov.max()
+    if best < 0.3:
+        return False
+    # outermost plane whose coverage is close to the best (walls are behind furniture faces)
+    k = int(np.flatnonzero(cov >= 0.8 * best).max())
+    c0 = -in_max + (k + 0.5) * bin_w
+    core = o[np.abs(o - c0) < 0.03]
+    if len(core) < 15:
+        return False
+    oc = float(np.median(core))
+    e.c = float(e.c + oc * e.outward)
+    mad = 1.4826 * np.median(np.abs(core - oc))
+    e.sigma_fit = float(mad / np.sqrt(max(len(core) / 20.0, 1)))
+    e.n_pts = int(len(core))
+    e.observed = True
+    return True
+
+
+def _merge_jogs(E, max_jog=0.5, max_step=0.06, weak_jog=0.6, weak_step=0.15, weak_pts=40):
     """Remove short edges between two parallel edges that refined onto (nearly) the same plane:
-    they are notches cut by furniture in the occupancy mask, not walls."""
+    they are notches cut by furniture in the occupancy mask, not walls. A short edge with weak
+    wall support (unobserved or < `weak_pts` points) is also removed when its neighbours lie
+    within `weak_step` of each other: a real alcove/nib has its own wall face."""
     E = list(E)
     changed = True
     while changed and len(E) > 4:
@@ -494,7 +553,10 @@ def _merge_jogs(E, max_jog=0.5, max_step=0.06):
         n = len(E)
         for k in range(n):
             a, e, b = E[k - 1], E[k], E[(k + 1) % n]
-            if abs(e.b - e.a) < max_jog and a.axis == b.axis and abs(a.c - b.c) < max_step:
+            L = abs(e.b - e.a)
+            weak = (not e.observed) or e.n_pts < weak_pts
+            if a.axis == b.axis and ((L < max_jog and abs(a.c - b.c) < max_step) or
+                                     (WALL_FIT == "planes" and weak and L < weak_jog and abs(a.c - b.c) < weak_step)):
                 wa, wb = abs(a.b - a.a), abs(b.b - b.a)
                 a.c = (a.c * wa + b.c * wb) / max(wa + wb, 1e-9)
                 a.sigma_fit = max(a.sigma_fit, b.sigma_fit)
