@@ -1,0 +1,19 @@
+{
+ "note": "SYNTHETIC injection on a real wall of the sample capture; not real damage",
+ "wall": "R1-W1-S",
+ "truth": [
+  {
+   "cls": "water_stain",
+   "w": 0.4,
+   "h": 0.25
+  },
+  {
+   "cls": "crack",
+   "w": 0.4095760221444959,
+   "h": 0.286788218175523
+  }
+ ],
+ "detected": [],
+ "concealed": [],
+ "scope": []
+}

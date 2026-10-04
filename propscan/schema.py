@@ -98,6 +98,9 @@ class DriftReport(BaseModel):
     max_correction_m: float
     footprint_area_uncorrected_m2: Optional[float] = None
     footprint_area_corrected_m2: Optional[float] = None
+    ghost_wall_area_m2: Optional[float] = Field(
+        None, description="area of 2.5 cm plan cells holding wall returns 0.3-1.9 m above the floor; "
+                          "doubled (drifted) walls inflate it, so lower is sharper")
 
 
 class PropertyScan(BaseModel):

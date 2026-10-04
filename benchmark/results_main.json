@@ -1,0 +1,233 @@
+{
+ "repeatability_lidar_floor_vs_ceil": {
+  "plan_iou": 0.745,
+  "matched_rooms": 6,
+  "walls_compared": 20,
+  "walls_within_1cm_or_0p5pct": 0.1,
+  "wall_abs_diff_median_cm": 25.9,
+  "wall_abs_diff_p90_cm": 61.9,
+  "ceiling_pairs": [],
+  "area_pairs": [
+   [
+    "R1",
+    14.25,
+    25.24
+   ],
+   [
+    "R2",
+    10.9,
+    10.65
+   ],
+   [
+    "R3",
+    7.86,
+    6.64
+   ],
+   [
+    "R5",
+    4.22,
+    4.21
+   ],
+   [
+    "R6",
+    2.62,
+    1.73
+   ],
+   [
+    "R8",
+    1.76,
+    1.8
+   ]
+  ],
+  "openings_a": 11,
+  "openings_b": 5,
+  "openings_matched": 5,
+  "opening_width_diff_le_2cm": 0.2
+ },
+ "repeatability_lidar_room_vs_ceil": {
+  "plan_iou": 0.316,
+  "matched_rooms": 0,
+  "walls_compared": 0,
+  "walls_within_1cm_or_0p5pct": null,
+  "wall_abs_diff_median_cm": null,
+  "wall_abs_diff_p90_cm": null,
+  "ceiling_pairs": [],
+  "area_pairs": [],
+  "openings_a": 11,
+  "openings_b": 2,
+  "openings_matched": 0,
+  "opening_width_diff_le_2cm": null
+ },
+ "repeatability_lidar_floor_vs_ceil_NO_DRIFT": {
+  "plan_iou": 0.753,
+  "matched_rooms": 7,
+  "walls_compared": 23,
+  "walls_within_1cm_or_0p5pct": 0.043,
+  "wall_abs_diff_median_cm": 23.49,
+  "wall_abs_diff_p90_cm": 84.21,
+  "ceiling_pairs": [],
+  "area_pairs": [
+   [
+    "R1",
+    22.43,
+    24.86
+   ],
+   [
+    "R2",
+    9.05,
+    5.68
+   ],
+   [
+    "R3",
+    6.41,
+    11.38
+   ],
+   [
+    "R4",
+    4.66,
+    1.69
+   ],
+   [
+    "R5",
+    4.89,
+    4.26
+   ],
+   [
+    "R6",
+    4.66,
+    11.38
+   ],
+   [
+    "R8",
+    1.42,
+    1.82
+   ]
+  ],
+  "openings_a": 11,
+  "openings_b": 7,
+  "openings_matched": 5,
+  "opening_width_diff_le_2cm": 0.2
+ },
+ "drift_ablation": {
+  "floor": {
+   "footprint_on": 52.1605,
+   "footprint_off": 51.496,
+   "rooms_on": 7,
+   "rooms_off": 7,
+   "ghost_wall_area_on": 13.62,
+   "ghost_wall_area_off": 13.359,
+   "loop_closures": 18,
+   "mean_correction_m": 0.11744854042047055,
+   "max_correction_m": 0.2284851088861847
+  },
+  "ceil": {
+   "footprint_on": 54.4598,
+   "footprint_off": 55.6212,
+   "rooms_on": 10,
+   "rooms_off": 8,
+   "ghost_wall_area_on": 17.003,
+   "ghost_wall_area_off": 15.087,
+   "loop_closures": 4,
+   "mean_correction_m": 0.10553910607869059,
+   "max_correction_m": 0.31588023141789523
+  }
+ },
+ "timing_s": {
+  "L_room": {
+   "load": 5.92,
+   "drift": 61.21,
+   "fuse": 34.29,
+   "plan": 1.26,
+   "damage": 26.05,
+   "total": 129.05
+  },
+  "L_floor": {
+   "load": 10.71,
+   "drift": 76.53,
+   "fuse": 34.63,
+   "plan": 3.8,
+   "damage": 60.67,
+   "total": 187.22
+  },
+  "L_ceil": {
+   "load": 8.88,
+   "drift": 80.86,
+   "fuse": 31.54,
+   "plan": 5.8,
+   "damage": 81.77,
+   "total": 210.27
+  },
+  "L_floor_nodrift": {
+   "load": 11.83,
+   "drift": 0.0,
+   "fuse": 32.2,
+   "plan": 3.66,
+   "damage": 56.73,
+   "total": 105.4
+  },
+  "L_ceil_nodrift": {
+   "load": 9.03,
+   "drift": 0.0,
+   "fuse": 33.41,
+   "plan": 7.1,
+   "damage": 271.16,
+   "total": 322.41
+  },
+  "V_room": null,
+  "V_floor": null,
+  "V_ceil": null,
+  "P_ceil": null
+ },
+ "counts": {
+  "L_room": {
+   "rooms": 3,
+   "openings": 2,
+   "damage": 0,
+   "footprint": 21.8845,
+   "footprint_ci": [
+    21.5139,
+    22.2551
+   ]
+  },
+  "L_floor": {
+   "rooms": 7,
+   "openings": 5,
+   "damage": 0,
+   "footprint": 52.1605,
+   "footprint_ci": [
+    51.3461,
+    52.975
+   ]
+  },
+  "L_ceil": {
+   "rooms": 10,
+   "openings": 11,
+   "damage": 0,
+   "footprint": 54.4598,
+   "footprint_ci": [
+    53.5889,
+    55.3307
+   ]
+  },
+  "L_floor_nodrift": {
+   "rooms": 7,
+   "openings": 7,
+   "damage": 0,
+   "footprint": 51.496,
+   "footprint_ci": [
+    50.6807,
+    52.3113
+   ]
+  },
+  "L_ceil_nodrift": {
+   "rooms": 8,
+   "openings": 11,
+   "damage": 0,
+   "footprint": 55.6212,
+   "footprint_ci": [
+    54.7271,
+    56.5154
+   ]
+  }
+ }
+}

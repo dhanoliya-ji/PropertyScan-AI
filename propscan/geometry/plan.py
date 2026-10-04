@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import os
+
 import cv2
 import numpy as np
 from matplotlib.path import Path as MplPath
@@ -21,6 +23,11 @@ from scipy.spatial import cKDTree
 from skimage.segmentation import watershed
 
 RES = 0.025  # plan grid, metres
+# Wall-surface fitting mode (fix loop, docs/FIX_LOOP.md):
+#   "legacy": fit each room edge to the first room-facing vertical surface 0.12-2.2 m high
+#   "high":   fit to the outermost well-supported room-facing plane *above furniture height*
+#             (1.5 m .. ceiling), searching up to 0.8 m outwards; merge furniture jogs
+WALL_FIT = os.environ.get("PROPSCAN_WALL_FIT", "high")
 
 
 @dataclass
@@ -235,6 +242,7 @@ def build_plan(P, N, cams_xz, cam_y, fs=None, wall_band=None, min_room_area=1.2,
     is_wall = (np.abs(N[:, 1]) < 0.3) & (yb > floor + 0.12) & (yb < min(top, floor + 2.2))
     is_floor = (N[:, 1] > 0.8) & (np.abs(yb - floor) < 0.05)
     is_stuff = (yb > floor - 0.05) & (yb < floor + 1.3) & ~is_wall
+    is_hi = (np.abs(N[:, 1]) < 0.3) & (yb > floor + 1.5) & (yb < ((ceil - 0.08) if ceil else floor + 2.4))
 
     lo, shape = _grid(P, cams_xz)
     wall = _count(P[is_wall][:, [0, 2]], lo, shape)
@@ -273,7 +281,7 @@ def build_plan(P, N, cams_xz, cam_y, fs=None, wall_band=None, min_room_area=1.2,
     rooms = []
     for lbl in [l for l in np.unique(labels) if l > 0]:
         m = labels == lbl
-        r = _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings)
+        r = _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings, is_hi)
         if r is not None:
             rooms.append(r)
 
@@ -347,7 +355,7 @@ def _cells_to_xz(ij, lo):
     return np.c_[ij[:, 1] * RES + lo[0] + RES / 2, ij[:, 0] * RES + lo[1] + RES / 2]
 
 
-def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings):
+def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings, is_hi=None):
     m8 = m.astype(np.uint8)
     cnts, _ = cv2.findContours(m8, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     if not cnts:
@@ -376,7 +384,12 @@ def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings):
     # refine every edge onto the wall surface that faces into the room
     Wi = np.flatnonzero(is_wall & near)
     Wp, Wn = P[Wi], N[Wi]
+    if WALL_FIT == "high" and is_hi is not None:
+        Hi = np.flatnonzero(is_hi & near)
+        Hp, Hn = P[Hi], N[Hi]
     for e in E:
+        if WALL_FIT == "high" and is_hi is not None and _fit_edge_high(e, Hp, Hn):
+            continue
         ax = 0 if e.axis == 'V' else 2       # constant coordinate axis
         al = 2 if e.axis == 'V' else 0       # along axis
         lo_s, hi_s = sorted((e.a, e.b))
@@ -398,6 +411,8 @@ def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings):
             e.observed = False
             e.sigma_fit = 0.03
             e.n_pts = int(len(v))
+    if WALL_FIT == "high":
+        E = _merge_jogs(E)
     poly = _poly_from_edges(E)
     V = np.array(poly)
     # update spans from refined vertices
@@ -433,6 +448,62 @@ def _room_geometry(lbl, m, lo, P, N, is_wall, floor, ceil, warnings):
     area = abs(_shoelace(V))
     per = float(sum(np.hypot(*(V[(k + 1) % len(V)] - V[k])) for k in range(len(V))))
     return RoomGeom(lbl, m, E, poly, fy, fs_, cy, cs, cobs, area, per)
+
+
+def _fit_edge_high(e, Hp, Hn, out_max=0.8, in_max=0.25, bin_w=0.02):
+    """Fit edge `e` to the outermost well-supported room-facing plane above furniture height."""
+    ax = 0 if e.axis == 'V' else 2
+    al = 2 if e.axis == 'V' else 0
+    lo_s, hi_s = sorted((e.a, e.b))
+    trim = min(0.15, 0.2 * (hi_s - lo_s))
+    off = (Hp[:, ax] - e.c) * e.outward          # + = outwards from the room
+    sel = ((off > -in_max) & (off < out_max) & (Hp[:, al] > lo_s + trim) & (Hp[:, al] < hi_s - trim)
+           & (Hn[:, ax] * e.outward < -0.8))
+    o = off[sel]
+    if len(o) < 25:
+        return False
+    h, edges = np.histogram(o, bins=np.arange(-in_max, out_max + bin_w, bin_w))
+    h = np.convolve(h, [1, 1, 1], "same")
+    strong = np.flatnonzero((h >= max(15, 0.4 * h.max())))
+    k = strong.max()                              # outermost strong peak
+    # walk to the local maximum of that peak
+    while k + 1 < len(h) and h[k + 1] >= h[k]:
+        k += 1
+    while k - 1 >= 0 and h[k - 1] > h[k]:
+        k -= 1
+    c0 = edges[k] + bin_w / 2
+    core = o[np.abs(o - c0) < 0.03]
+    if len(core) < 15:
+        return False
+    oc = float(np.median(core))
+    e.c = float(e.c + oc * e.outward)
+    mad = 1.4826 * np.median(np.abs(core - oc))
+    e.sigma_fit = float(mad / np.sqrt(max(len(core) / 20.0, 1)))
+    e.n_pts = int(len(core))
+    e.observed = True
+    return True
+
+
+def _merge_jogs(E, max_jog=0.5, max_step=0.06):
+    """Remove short edges between two parallel edges that refined onto (nearly) the same plane:
+    they are notches cut by furniture in the occupancy mask, not walls."""
+    E = list(E)
+    changed = True
+    while changed and len(E) > 4:
+        changed = False
+        n = len(E)
+        for k in range(n):
+            a, e, b = E[k - 1], E[k], E[(k + 1) % n]
+            if abs(e.b - e.a) < max_jog and a.axis == b.axis and abs(a.c - b.c) < max_step:
+                wa, wb = abs(a.b - a.a), abs(b.b - b.a)
+                a.c = (a.c * wa + b.c * wb) / max(wa + wb, 1e-9)
+                a.sigma_fit = max(a.sigma_fit, b.sigma_fit)
+                a.observed = a.observed and b.observed
+                drop = {k, (k + 1) % n}
+                E = [E[i] for i in range(n) if i not in drop]
+                changed = True
+                break
+    return E
 
 
 def _shoelace(V):

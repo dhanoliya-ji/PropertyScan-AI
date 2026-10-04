@@ -53,6 +53,9 @@ def geometry_from_frameset(fs, tier, drift=True, timings=None, gravity_aligned=T
     cams = fs.poses[:, :3, 3]
     pg = build_plan(P, N, cams[:, [0, 2]], cams[:, 1], fs, single_room=single_room)
     timings["plan"] = time.time() - t
+    w = (np.abs(N[:, 1]) < 0.3) & (P[:, 1] > pg.floor_y + 0.3) & (P[:, 1] < pg.floor_y + 1.9)
+    drep["ghost_wall_area_m2"] = round(len(np.unique(np.floor(P[w][:, [0, 2]] / 0.025).astype(np.int64), axis=0))
+                                       * 0.025 ** 2, 3)
     return pg, P, N, drep
 
 

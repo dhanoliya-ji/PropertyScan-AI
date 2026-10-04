@@ -20,10 +20,10 @@ from .frames import FrameSet, backproject, voxel_down
 
 def _frag_cloud(fs, idx, voxel):
     pts, nrm = [], []
-    for i in idx[::2]:
+    for i in idx:
         P, N = backproject(fs.depths[i], fs.masks[i], fs.Ks[i], fs.poses[i], min(fs.max_depth, 3.5))
-        if len(P) > 2000:
-            s = np.random.default_rng(i).choice(len(P), 2000, replace=False)
+        if len(P) > 3000:
+            s = np.random.default_rng(i).choice(len(P), 3000, replace=False)
             P, N = P[s], N[s]
         pts.append(P)
         nrm.append(N)
@@ -44,7 +44,7 @@ def _yaw_only(T):
     return out
 
 
-def correct_drift(fs: FrameSet, enabled=True, frag_len=None, voxel=0.04, max_pair_dist=2.5):
+def correct_drift(fs: FrameSet, enabled=True, frag_len=None, voxel=0.03, max_pair_dist=3.0, max_loop_per_frag=8):
     report = dict(method="fragment pose graph + ICP loop closures, yaw/translation only",
                   enabled=enabled, loop_closures=0, fragments=0, mean_correction_m=0.0, max_correction_m=0.0)
     if not enabled or fs.n < 40:
@@ -67,16 +67,17 @@ def correct_drift(fs: FrameSet, enabled=True, frag_len=None, voxel=0.04, max_pai
     for i in range(nf):
         if len(clouds[i].points) < 200:
             continue
-        for j in range(i + 1, nf):
+        # consecutive edge + the nearest non-adjacent fragments (bounded ICP budget)
+        dist = np.linalg.norm(cents - cents[i], axis=1)
+        later = [j for j in np.argsort(dist) if j > i + 1 and dist[j] <= max_pair_dist][:max_loop_per_frag]
+        for j in ([i + 1] if i + 1 < nf else []) + later:
             if len(clouds[j].points) < 200:
                 continue
             consecutive = j == i + 1
-            if not consecutive and np.linalg.norm(cents[i] - cents[j]) > max_pair_dist:
-                continue
             # coarse-to-fine ICP; fragments are already in a common (drifted) world frame
             T = np.eye(4)
             ok = True
-            for d in (0.12, 0.04):
+            for d in (0.15, 0.06, 0.03):
                 r = reg.registration_icp(clouds[j], clouds[i], d, T,
                                          reg.TransformationEstimationPointToPlane(), crit)
                 T = r.transformation
