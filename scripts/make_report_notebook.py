@@ -38,7 +38,7 @@ Every number in this notebook is read from files that `scripts/benchmark.py` reg
 | 1 | Status at a glance |
 | 2 | Constraints we worked under (hardware, ground truth, compute) |
 | 3 | The data we had |
-| 4 | Architecture: one engine, three tiers |
+| 4 | Architecture: one engine, three tiers, with block diagrams |
 | 5 | Design decisions and the evidence behind them |
 | 6 | Results: plans, gates, repeatability, drift, cross-tier, damage, timing |
 | 7 | Fix loop |
@@ -155,6 +155,20 @@ capture ──► tier front-end ──► FrameSet {depth_i, mask_i, K_i, pose_
 
 **One command per capture:** `python -m propscan run <capture> -o out/`. The tier is detected automatically: a `.zip` or Stray folder is LiDAR, a `.mp4`/`.mov` is video, a folder of room folders is photos.
 """)
+
+md(r"""
+### 4.1 Block diagrams
+
+**System overview:** three capture types → tier front-ends → a common FrameSet → the shared engine → outputs.
+""")
+code(r"""from IPython.display import Image
+Image(filename="docs/img/diagram_system.png", width=1000)""")
+md("**Tier front-ends:** how each input type becomes a FrameSet (depth + pose per frame).")
+code(r"""Image(filename="docs/img/diagram_tiers.png", width=1000)""")
+md("**Shared geometry engine:** the ten stages every tier goes through.")
+code(r"""Image(filename="docs/img/diagram_engine.png", width=1000)""")
+md("**Evaluation:** with no ground truth, what the benchmark measures instead, and how it feeds the fix loop.")
+code(r"""Image(filename="docs/img/diagram_evaluation.png", width=1000)""")
 
 md(r"""
 ## 5. Design decisions and the evidence behind them
