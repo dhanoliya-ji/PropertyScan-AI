@@ -16,10 +16,10 @@ These numbers are measured on the provided sample captures. **No laser or tape g
 
 See [benchmark/REPORT.md](../benchmark/REPORT.md) for the tables and how to regenerate them.
 
-| Tier | Wall length | Ceiling height | Openings | Typical 95% interval on a 3 m wall |
-|---|---|---|---|---|
-| LiDAR | see benchmark report | ±1–2 cm where the ceiling was scanned; prior-based ±24 cm and flagged `observed: false` where it wasn't | doors from walk-throughs, windows from rays passing through the wall | ±2 cm (fit + 0.3% scale) |
-| Video | see benchmark report | ±18 cm (model scale) | doors from walk-throughs | ±18 cm (3% scale term + surfaces) |
-| Photos | see benchmark report | prior unless the ceiling is in view | doors from `door_to_*` photos (width prior ±16 cm unless measured) | ±43 cm (7% scale term) |
+| Tier | Measured on the sample data (see benchmark/REPORT.md) | Interval on a 3 m wall (error budget) |
+|---|---|---|
+| LiDAR | Repeatability between the two apartment captures: wall planes agree to about 3 cm median, but wall *lengths* differ by a median of 23 cm (corner topology and coverage). 0% within 1 cm / 0.5%. Ceiling ±1–2 cm where scanned; otherwise a prior flagged `observed: false`. | ±2 cm |
+| Video | Not usable as a measurement tier yet: single_room walls have 59% median error against LiDAR, and the footprint is −35%. Monocular scale chaining fails on long clips. | ±18 cm (not calibrated: coverage 0%) |
+| Photos | Stitch runs (4/7 rooms recovered, adjacency correct, no overlaps), but the footprint is −47% against LiDAR because of missing rooms. | ±43 cm |
 
 The interval widths above are the pre-calibration error budget in [propscan/uncertainty.py](../propscan/uncertainty.py). The calibration table in the benchmark report shows how often the LiDAR value falls inside each tier's interval.

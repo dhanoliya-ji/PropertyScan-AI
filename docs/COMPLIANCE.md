@@ -10,7 +10,7 @@ Status key:
 |---|---|---|---|---|
 | 1.1 | Capture route (Route 2: stock apps + one-page protocol) | docs/CAPTURE_PROTOCOL.md | protocol page | Done |
 | 1.2 | Photo tier: 2–8 stills per room, folders → stitched whole-property plan | propscan/tiers/photos.py | `benchmark/runs/main/P_ceil.json/.png` | Partial: runs and stitches through door photos; not every room registers on video-derived stills |
-| 1.3 | Video tier: handheld walkthrough | propscan/tiers/video.py | `benchmark/runs/main/V_*.json/.png` | Done (accuracy below gate, see 2.10) |
+| 1.3 | Video tier: handheld walkthrough | propscan/tiers/video.py | `benchmark/runs/main/V_*.json/.png` | Partial: runs end to end; accuracy fails the gate (59% median error) |
 | 1.4 | LiDAR tier: depth, poses, intrinsics | propscan/tiers/lidar.py, propscan/io/stray.py | `benchmark/runs/main/L_*.json/.png` | Done |
 | 1.5 | Device matrix with honest per-tier accuracy | docs/DEVICE_MATRIX.md | table | Done |
 | 2.1 | Per-room plan: walls, ceiling height, floor area, openings | propscan/geometry/plan.py, propscan/assemble.py | `Room` in the JSON | Done |
@@ -29,10 +29,10 @@ Status key:
 | 2.14 | Laser/tape ground truth | — | — | Not measured: none provided; LiDAR is used as the reference for the thinner tiers |
 | G1 | Opening widths ≤ 2 cm on ≥ 85% | plan.py (`_measure_door`, wall gaps) | repeatability of opening widths | Not measured vs laser; cross-capture consistency reported |
 | G2 | Ceiling height ≤ 1.5 cm; spread ≤ 1 cm | plan.py (per-room levels) | REPORT.md | Partial: only with_ceiling observes ceilings, so no cross-capture spread exists |
-| G3 | Repeatability 1 cm / 0.5% per wall | scripts/benchmark.py, scripts/fixloop_eval.py | REPORT.md, FIX_LOOP.md | See REPORT (fix-loop target) |
+| G3 | Repeatability 1 cm / 0.5% per wall | scripts/benchmark.py, scripts/fixloop_eval.py | REPORT.md, FIX_LOOP.md | Fail: 0% within gate on the final benchmark; fix loop 0% → 14.3% on fixed clouds |
 | G4 | Drift accountability + on/off ablation | propscan/geometry/drift.py, `--no-drift` | drift table, ghost-wall metric | Done |
-| G5 | Photo-tier whole-property stitch, ±8% | photos.py, benchmark.py (`photo_stitch`) | REPORT.md | See REPORT |
-| G6 | Video ±3%, photo ±8%, calibration at every tier | benchmark.py (`cross_tier`) | REPORT.md (CI coverage) | See REPORT |
+| G5 | Photo-tier whole-property stitch, ±8% | photos.py, benchmark.py (`photo_stitch`) | REPORT.md | Fail: adjacency correct, no overlaps, but 4/7 rooms and footprint −47% |
+| G6 | Video ±3%, photo ±8%, calibration at every tier | benchmark.py (`cross_tier`) | REPORT.md (CI coverage) | Fail: video 0% within ±3%, intervals not calibrated |
 | 3 | Head-to-head vs a consumer app | — | — | Not done: needs a Polycam/magicplan scan of the same rooms on an iPhone; no device or access to the apartment |
 | 4 | Fix loop: declaration, shipped fix, regenerable before/after, diff | docs/FIX_LOOP.md, scripts/fixloop_eval.py, `PROPSCAN_WALL_FIT` | benchmark/fixloop_eval.json | Done |
 | 5 | Process evidence | git history | incremental commits with measured numbers | Done |

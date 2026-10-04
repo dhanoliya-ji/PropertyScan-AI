@@ -63,7 +63,12 @@ ARKit VIO drifts over a multi-room walk. Revisited walls appear doubled, and the
 4. **Project the corrections to yaw plus translation**, because ARKit gravity is trustworthy and correcting roll or pitch only adds noise.
 5. Interpolate the corrections between fragment centres.
 
-**Ablation** (`--no-drift` gives poses as-is): see the drift table in the benchmark report. On `with_ceiling`, 37 loop closures are accepted, the mean correction is 0.11 m (max 0.37 m), and the ghost-wall area (2.5 cm cells holding wall returns, which drifted double walls inflate) drops from 15.27 to 14.06 m² (−8%).
+**Ablation** (`--no-drift` gives poses as-is; table in the benchmark report).
+- *Development run* (all frames, 8 loop candidates per fragment), on `with_ceiling`: 37 loop closures, mean correction 0.11 m (max 0.37 m), ghost-wall area 15.27 → 14.06 m² (−8%).
+- *Final benchmark config* (about 700 frames, 4 loop candidates, chosen at 15:40 for live-run speed):
+  - `with_ceiling`: 17 loop closures, ghost-wall area 14.74 → 13.76 m² (−7%).
+  - `floor_only`: ghost-wall area 12.64 → 12.47 m² only. **The mean correction is 0.46 m (max 0.85 m), which is implausibly large.** The optimiser accepted bad loop closures, and the open-plan rooms merged (8 → 5 rooms).
+- This is a known regression of the speed configuration, with a clear next step: a stricter loop-closure fitness and RMSE, and rejecting corrections over 0.3 m.
 
 **A regression we caught:** a speed-up (4 cm voxels, half the frames, 2 ICP levels) quietly collapsed loop closures from 38 to 4 and made ghosting *worse* than no correction (17.0 vs 15.1 m²). The ghost metric in every run's JSON is what exposed it. The fix restored the quality settings and bounded the cost differently, with at most 8 loop candidates per fragment.
 
