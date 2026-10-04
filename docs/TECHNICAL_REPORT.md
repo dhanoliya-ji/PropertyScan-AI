@@ -86,9 +86,14 @@ Walls that were never observed are widened ×2 and flagged `observed: false`. Un
 
 ## 6. Fix loop: repeatability (details in [FIX_LOOP.md](FIX_LOOP.md))
 
-**Worst gate:** LiDAR repeatability. Only 10% of matched walls agree within 1 cm or 0.5% between the two apartment captures, with a median difference of 25.9 cm.
+**Worst gate:** LiDAR repeatability between the two apartment captures. Before: 0.0% of 25 matched walls within 1 cm / 0.5%, median 24.1 cm.
 
-**Diagnosis:** the room-to-room *plane spacing* (registration-free) also differed by a median of 11 cm. So the wall *surfaces* themselves, not just the polygon corners, were landing in different places. The legacy fit took the first room-facing vertical surface 0.12–2.2 m high, which is often a sofa back, fridge front or cabinet face. What furniture is visible differs between captures. The fix fits each wall to the outermost well-supported room-facing plane *above furniture height* (1.5 m to the ceiling, searching up to 0.8 m outwards), then merges the notches furniture cuts into the outline. The before/after numbers are in FIX_LOOP.md.
+- **H1 (furniture faces fitted as walls): rejected.** A wall fit above 1.5 m made it worse (median 41 cm). Only 19% of edges moved, and `floor_only` barely observed that height band.
+- **H2 (wall position set by where the occupancy mask stops, plus unstable corner topology): supported.** Wall-plane positions repeat to a median of 2.8 cm, while lengths differ by 23 cm.
+- **Shipped fix:** snap each edge to the room-facing plane with the best *coverage along the edge*, searching up to 1 m outward and capped at our own wall's back face. Uncovered edges are flagged unobserved, weak jogs are merged, and near-rectangular rooms are snapped to rectangles.
+- **After:** 14.3% within the gate, p90 66 → 51 cm, median unchanged (24.1 cm).
+
+The gate still fails. The residual is coverage and room-split differences between two differently-walked captures. One threshold (plane coverage 0.5) was chosen on this pair, and its sensitivity is reported. I did not record a numeric prediction before shipping, and the report says so.
 
 ## 7. Known failure modes
 

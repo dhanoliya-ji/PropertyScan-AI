@@ -105,18 +105,18 @@
   "opening_width_diff_le_2cm": 0.0
  },
  "planes": {
-  "plan_iou": 0.759,
+  "plan_iou": 0.744,
   "matched_rooms": 7,
-  "walls_compared": 23,
-  "walls_within_1cm_or_0p5pct": 0.13,
-  "wall_abs_diff_median_cm": 14.36,
+  "walls_compared": 21,
+  "walls_within_1cm_or_0p5pct": 0.143,
+  "wall_abs_diff_median_cm": 24.11,
   "wall_abs_diff_p90_cm": 50.76,
   "ceiling_pairs": [],
   "area_pairs": [
    [
     "R1",
-    25.79,
-    22.39
+    25.43,
+    22.34
    ],
    [
     "R2",
@@ -126,21 +126,21 @@
    [
     "R3",
     7.39,
-    7.3
+    7.27
    ],
    [
     "R5",
-    6.27,
-    5.99
+    5.67,
+    5.85
    ],
    [
     "R6",
     5.03,
-    3.52
+    3.34
    ],
    [
     "R7",
-    2.53,
+    2.23,
     1.67
    ],
    [
@@ -156,8 +156,8 @@
  },
  "evidence": {
   "edges": 116,
-  "moved_outward_gt_5cm": 0.49137931034482757,
-  "moved_outward_gt_15cm": 0.3103448275862069,
-  "median_abs_move_cm": 6.7128085931665415
+  "moved_outward_gt_5cm": 0.46551724137931033,
+  "moved_outward_gt_15cm": 0.3017241379310345,
+  "median_abs_move_cm": 6.63576427154402
  }
 }

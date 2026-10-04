@@ -33,29 +33,44 @@ Every other gate is either looser or not measurable without laser ground truth. 
 
 ## Result
 
-| Variant (same fused clouds, only the wall fit differs) | Plan IoU | Walls compared | Within 1 cm / 0.5% | Median abs diff | p90 |
+All rows come from the same fused clouds; only the wall fit differs. Final numbers are from `benchmark/fixloop_eval.json` at commit `73be2dd`.
+
+| Variant | Plan IoU | Walls compared | Within 1 cm / 0.5% | Median abs diff | p90 |
 |---|---|---|---|---|---|
-| **Before:** legacy | 0.705 | 25 | **0.0%** | **24.1 cm** | 66.2 cm |
+| **Before:** legacy | 0.705 | 25 | **0.0%** | 24.1 cm | 66.2 cm |
 | H1: high band (rejected) | 0.707 | 21 | 4.8% | 41.2 cm | 81.1 cm |
-| H2 step 1: coverage snap, no rectangle snap | 0.759 | 24 | 4.2% | 33.3 cm | 57.3 cm |
-| **After (shipped):** coverage snap + rectangle snap, cover ≥ 0.5 | **0.759** | 23 | **13.0%** | **14.4 cm** | **50.8 cm** |
+| H2 without rectangle snap | 0.745 | 23 | 4.3% | 27.1 cm | 57.8 cm |
+| H2 + rectangle snap, before the back-face barrier (`1cefcd6`) | 0.759 | 23 | 13.0% | 14.4 cm | 50.8 cm |
+| **After (shipped, `73be2dd`):** + back-face barrier | **0.744** | 21 | **14.3%** | 24.1 cm | **50.8 cm** |
 
-Coverage-threshold sensitivity (from `benchmark/fixloop_cover_sensitivity.txt`):
+Coverage-threshold sensitivity, shipped code (`benchmark/fixloop_cover_sensitivity.txt`):
 
-| Coverage threshold | Within gate | Median abs diff |
-|---|---|---|
-| 0.3 | 8.3% | 17.1 cm |
-| 0.5 (shipped) | 13.0% | 14.4 cm |
-| 0.6 | 4.8% | 34.1 cm |
+| Coverage threshold | Within gate | Median | p90 |
+|---|---|---|---|
+| 0.3 | 9.5% | 25.8 cm | 50.8 cm |
+| **0.5 (shipped)** | **14.3%** | 24.1 cm | 50.8 cm |
+| 0.6 | 8.7% | 33.9 cm | 61.5 cm |
 
-**The threshold was chosen on this same pair**, the only same-tier pair available, so the 13.0% is optimistic. The direction (any threshold from 0.3 to 0.5 beats legacy) is the robust finding.
+**The threshold was chosen on this same pair**, the only same-tier pair available, so 14.3% is optimistic.
 
-**Verdict.**
-- The root cause (H2, corner topology) is supported: the median dropped 40% and matched rectangular rooms now agree closely. For example:
+**What moved and what didn't.**
+- The within-gate share went from 0% to 9–14% for every threshold tried, and the p90 from 66 to 51 cm. Those are the robust movements.
+- **The median did not move: 24.1 → 24.1 cm.**
+- The median is unstable at this sample size. A principled change that alters only which ~21 walls get matched (the back-face barrier) moved it from 14.4 to 24.1 cm. So I don't claim a median improvement.
+- Matched rectangular rooms now agree closely. For example:
   - room 3: 2.297 vs 2.276 m, and 3.218 vs 3.208 m;
   - room 5: 2.330 vs 2.301 m.
-- **The gate still fails:** 13% of walls are within 1 cm / 0.5%, against the 100% the gate implies.
-- *Why it fell short:* the remaining large differences are coverage, not fitting. `floor_only` never observed several walls that `with_ceiling` did (e.g. the top wall of room 2, where the two plans sit 47 cm apart), and the two walks split the open-plan living area differently (27.1 vs 22.5 m²). A same-protocol repeat capture would remove most of that, and the capture protocol now asks for every wall to be swept floor-to-ceiling.
+- Separately from repeatability, the plan overlay ([docs/img/fixloop_plan_legacy_vs_planes.png](img/fixloop_plan_legacy_vs_planes.png)) shows rooms now sitting on their walls instead of up to 40 cm inside them. The LiDAR footprint of `with_ceiling` grows from 55.5 to 65.7 m² for that reason. This matters most for the walk-in test, where a laser measures wall to wall.
+
+**Verdict.**
+- H2 (wall position set by the occupancy boundary, and corner topology) is supported by the decomposition: plane positions repeat to about 3 cm, while lengths don't.
+- The shipped fix gives meaningful movement in the share of walls passing, but **the gate still fails (14.3% vs 100%)**.
+- *Why it fell short:* the large residuals are coverage and segmentation, not fitting:
+  - `floor_only` never observed several walls that `with_ceiling` did (e.g. room 2's top wall: 47 cm apart);
+  - the two walks split the open-plan living area into rooms differently;
+  - wall *length* is corner-to-corner, so one different neighbour changes it by tens of centimetres even when both planes agree to 1 cm.
+
+  A same-protocol repeat capture would remove most of this. The protocol now requires every wall to be swept floor to ceiling and every doorway crossed in both directions.
 
 ## Regenerate
 ```bash
@@ -63,4 +78,4 @@ python scripts/fixloop_eval.py --evidence          # before (legacy), H1 (high),
 PROPSCAN_WALL_FIT=legacy python scripts/benchmark.py --force --tag before --runs L_floor L_ceil   # end-to-end before
 python scripts/benchmark.py --force --tag main --runs L_floor L_ceil                             # end-to-end after
 ```
-Readable diff: `git diff 903e9a8~1 1cefcd6 -- propscan/geometry/plan.py` (`_fit_edge_planes`, `_merge_jogs`, `_rectangle_snap`). Both modes remain selectable through `PROPSCAN_WALL_FIT`.
+Readable diff: `git diff 903e9a8~1 73be2dd -- propscan/geometry/plan.py` (`_fit_edge_planes`, `_merge_jogs`, `_rectangle_snap`). Both modes remain selectable through `PROPSCAN_WALL_FIT`.
