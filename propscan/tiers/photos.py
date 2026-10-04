@@ -259,7 +259,7 @@ def _door_on_wall(scan_room, cam_xz, dir_xz):
     return best
 
 
-def run(path, timings=None):
+def run(path, timings=None, damage=True):
     from ..pipeline import geometry_from_frameset
     timings = timings if timings is not None else {}
     root = Path(path)
@@ -279,6 +279,12 @@ def run(path, timings=None):
             warnings.append(f"{d.name}: no room geometry recovered")
             continue
         sub = assemble(pg, "photos", d.name)
+        if damage:
+            try:
+                from ..damage.detect import analyse
+                analyse(sub, fs, None, "photos", floor_y=pg.floor_y)
+            except Exception as e:
+                warnings.append(f"{d.name}: damage stage failed: {type(e).__name__}: {e}")
         r = sub.rooms[0]
         r.name = d.name
         rooms.append(dict(name=d.name, scan=sub, room=r, fs=fs, doors=doors, P=P))
@@ -338,6 +344,7 @@ def run(path, timings=None):
 
     # ---- assemble the whole-property scan
     out_rooms = []
+    scan_damage, scan_flags, scan_scope = [], [], []
     for k, r in enumerate(rooms, 1):
         R2, t2 = transforms[r["name"]]
         rm = r["room"].model_copy(deep=True)
@@ -390,6 +397,21 @@ def run(path, timings=None):
             openings.append(o.model_copy(update=dict(id=oid, room_ids=[f"R{k}"], center=tuple(c.tolist()),
                                                      wall_ids=[w.replace(o.room_ids[0], f"R{k}") for w in o.wall_ids])))
             out_rooms[k - 1].opening_ids.append(oid)
+    # damage found per room (room-local frame) -> re-key to the stitched ids
+    for k, r in enumerate(rooms, 1):
+        sub = r["scan"]
+        R2, t2 = transforms[r["name"]]
+        rk = lambda sid: sid.replace("R1-", f"R{k}-", 1)
+        dmap = {}
+        for dmg in sub.damage:
+            nid = f"D{len(scan_damage) + 1}"
+            dmap[dmg.id] = nid
+            scan_damage.append(dmg.model_copy(update=dict(id=nid, surface_id=rk(dmg.surface_id))))
+        for f in sub.concealed_damage:
+            scan_flags.append(f.model_copy(update=dict(id=f"C{len(scan_flags) + 1}", surface_id=rk(f.surface_id),
+                                                       evidence=[dmap.get(e, e) for e in f.evidence])))
+        for it in sub.scope:
+            scan_scope.append(it.model_copy(update=dict(id=f"S{len(scan_scope) + 1}", surface_id=rk(it.surface_id))))
     # overlap check
     polys = [Polygon(r.polygon).buffer(0) for r in out_rooms]
     for i in range(len(polys)):
@@ -404,6 +426,7 @@ def run(path, timings=None):
     timings["stitch"] = time.time() - t
     scan = PropertyScan(capture_id=root.name, tier="photos", rooms=out_rooms, openings=openings,
                         adjacency=adjacency, footprint_area=fp, warnings=warnings,
+                        damage=scan_damage, concealed_damage=scan_flags, scope=scan_scope,
                         error_budget=dict(U.BUDGETS["photos"]))
     allP = None
     # FrameSet list kept for damage analysis

@@ -87,17 +87,17 @@ def run(path, out_dir, tier="auto", drift=True, damage=True, capture_id=None, de
         scan = assemble(pg, tier, capture_id)
     elif tier == "photos":
         from .tiers import photos
-        scan, P, fs, drep = photos.run(path, timings=timings)
+        scan, P, fs, drep = photos.run(path, timings=timings, damage=damage)
         pg = None
     else:
         raise ValueError(tier)
     if drep is not None:
         scan.drift = DriftReport(**drep)
-    if damage and fs is not None:
+    if damage and fs is not None and tier != "photos":   # photo tier analyses per room
         t = time.time()
         try:
             from .damage.detect import analyse
-            analyse(scan, fs, src if tier != "photos" else None, tier)
+            analyse(scan, fs, src, tier, floor_y=pg.floor_y)
         except Exception as e:  # damage must never take the plan down
             scan.warnings.append(f"damage stage failed: {type(e).__name__}: {e}")
         timings["damage"] = time.time() - t
